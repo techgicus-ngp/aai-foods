@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /orders/{id} {
+      // Anyone can place an order (with basic validation)
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.phone is string
+                    && request.resource.data.address is string
+                    && request.resource.data.qty is number
+                    && request.resource.data.qty > 0 && request.resource.data.qty <= 50;
+      // Only the logged-in admin can view / update / delete
+      allow read, update, delete: if request.auth != null
+                    && request.auth.token.email == "YOUR_ADMIN_EMAIL@gmail.com";
+    }
+  }
+}
