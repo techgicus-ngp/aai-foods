@@ -4,7 +4,6 @@ import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } fro
 import { auth, db } from "./firebase.js";
 import { PRODUCTS } from "./products.js";
 
-
 // Admin can sign in with a full email (admin@gmail.com) or a simple username.
 // A username without "@" becomes  <username>@aaifoods.app
 const toEmail = (value) => {
@@ -29,6 +28,40 @@ const inRange = (o, range) => {
 };
 const kgFmt = (n) => (Number.isInteger(n) ? n : n.toFixed(1));
 const money = (n) => "₹" + n.toLocaleString("en-IN");
+
+/* ------------------------------------------------- split order into items */
+// Uses o.items if the order has an array, otherwise parses the saved string:
+// "चिवडा (Chivda) × 1 kg, बुंदी लाडू (Bundi Ladu) × 1.5 kg"
+const orderItems = (o) => {
+  const lookup = (key) => PRODUCTS.find((p) => `${p.mr} (${p.en})` === key);
+
+  let items;
+  if (Array.isArray(o.items) && o.items.length) {
+    items = o.items.map((i) => ({
+      key: i.product || i.name,
+      qty: Number(i.qty) || 0,
+      amount: i.total ?? null,
+    }));
+  } else {
+    items = String(o.product || "")
+      .split(/\s*,\s*/)
+      .filter(Boolean)
+      .map((part) => {
+        const m = part.match(/^(.*?)\s*[×x]\s*([\d.]+)\s*kg$/i);
+        return m
+          ? { key: m[1].trim(), qty: parseFloat(m[2]), amount: null }
+          : { key: part.trim(), qty: Number(o.qty) || 0, amount: null };
+      });
+  }
+
+  // amount per item: real product price if available, else split order total by kg
+  const totalKg = items.reduce((s, i) => s + i.qty, 0) || 1;
+  return items.map((i) => {
+    if (i.amount != null) return i;
+    const price = lookup(i.key)?.price; // change "price" if your field is named differently
+    return { ...i, amount: price != null ? price * i.qty : ((o.total || 0) * i.qty) / totalKg };
+  });
+};
 
 export default function Admin() {
   const [user, setUser] = useState(undefined); // undefined = loading
@@ -104,13 +137,19 @@ function Dashboard({ user }) {
     value: active.reduce((s, o) => s + (o.total || 0), 0),
   }), [scoped, active]);
 
-  // product-wise totals (cancelled orders are not counted)
+  // product-wise totals (cancelled orders are not counted).
+  // A multi-product order counts once under each product it contains.
   const summary = useMemo(() => {
-    const map = new Map(PRODUCTS.map((p) => [`${p.mr} (${p.en})`, { key: `${p.mr} (${p.en})`, mr: p.mr, en: p.en, orders: 0, kg: 0, amount: 0 }]));
+    const map = new Map(PRODUCTS.map((p) => {
+      const key = `${p.mr} (${p.en})`;
+      return [key, { key, mr: p.mr, en: p.en, orders: 0, kg: 0, amount: 0 }];
+    }));
     active.forEach((o) => {
-      let r = map.get(o.product);
-      if (!r) { r = { key: o.product, mr: o.product, en: "", orders: 0, kg: 0, amount: 0 }; map.set(o.product, r); }
-      r.orders += 1; r.kg += o.qty || 0; r.amount += o.total || 0;
+      orderItems(o).forEach((i) => {
+        let r = map.get(i.key);
+        if (!r) { r = { key: i.key, mr: i.key, en: "", orders: 0, kg: 0, amount: 0 }; map.set(i.key, r); }
+        r.orders += 1; r.kg += i.qty; r.amount += i.amount;
+      });
     });
     return [...map.values()].sort((a, b) => b.kg - a.kg || b.orders - a.orders);
   }, [active]);
@@ -126,7 +165,7 @@ function Dashboard({ user }) {
     const t = search.trim().toLowerCase();
     return scoped.filter((o) =>
       (status === "All" || o.status === status) &&
-      (!product || o.product === product) &&
+      (!product || orderItems(o).some((i) => i.key === product)) &&
       (!t || `${o.name} ${o.phone} ${o.address}`.toLowerCase().includes(t))
     );
   }, [scoped, status, product, search]);
@@ -201,7 +240,7 @@ function Dashboard({ user }) {
                     <em>{kgFmt(r.kg)} kg</em>
                   </span>
                   <span className="pnum">{r.orders}</span>
-                  <span className="pval">{money(r.amount)}</span>
+                  <span className="pval">{money(Math.round(r.amount))}</span>
                 </button>
               </li>
             ))}
@@ -245,7 +284,11 @@ function Dashboard({ user }) {
             {shown.map((o) => (
               <li key={o.id} className="ad-row">
                 <div className="c-order">
-                  <b>{o.product}</b>
+                  {orderItems(o).map((i) => (
+                    <b key={i.key} style={{ display: "block", fontWeight: i.key === product ? 700 : 500 }}>
+                      {i.key} × {kgFmt(i.qty)} kg
+                    </b>
+                  ))}
                   <small>#{o.id.slice(0, 6).toUpperCase()} on {orderDate(o).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</small>
                 </div>
                 <div className="c-qty">

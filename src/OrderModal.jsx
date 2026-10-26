@@ -3,8 +3,7 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase.js";
 import { WHATSAPP_NUMBER } from "./products.js";
 
-export default function OrderModal({ product, onClose }) {
-  const [qty, setQty] = useState(1);
+export default function OrderModal({ items = [], onQtyChange, onClose, onPlaced }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -12,21 +11,31 @@ export default function OrderModal({ product, onClose }) {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(null); // { waUrl, saved }
 
-  const total = qty * product.price;
-  const step = (d) => setQty((q) => Math.min(50, Math.max(0.5, +(q + d).toFixed(1))));
+  const total = items.reduce((s, i) => s + i.qty * i.price, 0);
+  const totalKg = items.reduce((s, i) => s + i.qty, 0);
 
   async function submit(e) {
     e.preventDefault();
     setError("");
+    if (items.length === 0) return setError("Your cart is empty. Please add at least one item.");
     if (name.trim().length < 2) return setError("Please enter your name.");
     if (!/^[6-9]\d{9}$/.test(phone.trim())) return setError("Enter a valid 10-digit mobile number.");
     if (address.trim().length < 8) return setError("Please enter your full delivery address.");
 
     setSaving(true);
+
+    const lines = items.map((i) => ({
+      product: `${i.mr} (${i.en})`,
+      pricePerKg: i.price,
+      qty: i.qty,
+      subtotal: i.qty * i.price,
+    }));
+
     const order = {
-      product: `${product.mr} (${product.en})`,
-      pricePerKg: product.price,
-      qty,
+      items: lines,
+      // Summary fields kept so an existing admin panel still shows something readable
+      product: lines.map((l) => `${l.product} × ${l.qty} kg`).join(", "),
+      qty: totalKg,
       total,
       name: name.trim(),
       phone: phone.trim(),
@@ -44,11 +53,14 @@ export default function OrderModal({ product, onClose }) {
     }
 
     // 2) Send to WhatsApp
+    const itemText = lines
+      .map((l, n) => `${n + 1}. ${l.product}\n   ${l.qty} kg × ₹${l.pricePerKg} = ₹${l.subtotal}`)
+      .join("\n");
     const msg =
       `*New Order – AAi Foods*\n\n` +
-      `Product: ${order.product}\n` +
-      `Quantity: ${qty} kg\n` +
-      `Total: ₹${total}\n\n` +
+      `${itemText}\n\n` +
+      `Total quantity: ${totalKg} kg\n` +
+      `*Total: ₹${total}*\n\n` +
       `Name: ${order.name}\n` +
       `Mobile: ${order.phone}\n` +
       `Address: ${order.address}`;
@@ -56,6 +68,7 @@ export default function OrderModal({ product, onClose }) {
 
     setSaving(false);
     setDone({ waUrl, saved });
+    onPlaced?.(); // clear the cart
     window.open(waUrl, "_blank");
   }
 
@@ -66,7 +79,7 @@ export default function OrderModal({ product, onClose }) {
 
         {done ? (
           <div className="thanks">
-            <h3>धन्यवाद, {name.split(" ")[0]}!</h3>
+            <h3>धन्यवाद, {name.trim().split(" ")[0]}!</h3>
             <p>
               {done.saved
                 ? "Your order is received."
@@ -80,18 +93,32 @@ export default function OrderModal({ product, onClose }) {
           </div>
         ) : (
           <form onSubmit={submit} noValidate>
-            <h3>{product.mr}</h3>
-            <p className="en">{product.en} · ₹{product.price} / kg</p>
+            <h3>Your order</h3>
 
-            <label>Quantity (kg)</label>
-            <div className="stepper">
-              <button type="button" onClick={() => step(-0.5)} aria-label="Less">−</button>
-              <input
-                type="number" min="0.5" max="50" step="0.5" value={qty}
-                onChange={(e) => setQty(Math.max(0.5, +e.target.value || 0.5))}
-              />
-              <button type="button" onClick={() => step(0.5)} aria-label="More">+</button>
-            </div>
+            {items.length === 0 ? (
+              <p className="en">Your cart is empty. Close this and add items from the menu.</p>
+            ) : (
+              <ul className="cart-list">
+                {items.map((i) => (
+                  <li key={i.id} className="cart-item">
+                    <div className="ci-name">
+                      <b>{i.mr}</b>
+                      <span>{i.en} · ₹{i.price}/kg</span>
+                    </div>
+                    <div className="qty-ctl" role="group" aria-label={`${i.en} quantity`}>
+                      <button type="button" onClick={() => onQtyChange(i.id, i.qty - 0.5)} aria-label="Less">−</button>
+                      <span>{i.qty} kg</span>
+                      <button type="button" onClick={() => onQtyChange(i.id, i.qty + 0.5)} aria-label="More">+</button>
+                    </div>
+                    <div className="ci-sub">₹{i.qty * i.price}</div>
+                    <button type="button" className="ci-remove" onClick={() => onQtyChange(i.id, 0)}
+                            aria-label={`Remove ${i.en}`}>×</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="total">Total ({totalKg} kg) <b>₹{total}</b></div>
 
             <label htmlFor="n">Your name</label>
             <input id="n" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
@@ -107,9 +134,8 @@ export default function OrderModal({ product, onClose }) {
 
             {error && <p className="err">{error}</p>}
 
-            <div className="total">Total <b>₹{total}</b></div>
-            <button className="btn btn-green full" disabled={saving}>
-              {saving ? "Placing order…" : "Place order"}
+            <button className="btn btn-green full" disabled={saving || items.length === 0}>
+              {saving ? "Placing order…" : `Place order · ₹${total}`}
             </button>
           </form>
         )}

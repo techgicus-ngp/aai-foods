@@ -2,6 +2,10 @@ import { useState } from "react";
 import { PRODUCTS, WHATSAPP_NUMBER } from "./products.js";
 import OrderModal from "./OrderModal.jsx";
 
+const FSSAI_NO = "21526077002920";
+const PHONE_DISPLAY = "+91 80558 08899";
+const PHONE_TEL = "+918055808899";
+
 const GROUPS = [
   { key: "sweet", mr: "गोड फराळ", en: "Sweets" },
   { key: "savoury", mr: "तिखट फराळ", en: "Savouries" },
@@ -15,8 +19,8 @@ const PROMISES = [
 ];
 
 const STEPS = [
-  { title: "Choose your faral", text: "Pick any item from the menu and tap Order Now." },
-  { title: "Enter your details", text: "Add quantity in kg, your name, mobile number and address." },
+  { title: "Choose your faral", text: "Add as many items as you like and set the quantity in kg." },
+  { title: "Enter your details", text: "Add your name, mobile number and address." },
   { title: "Confirm on WhatsApp", text: "Your order opens in WhatsApp so we can confirm it with you." },
 ];
 
@@ -37,8 +41,24 @@ function Icon({ name }) {
 }
 
 export default function Store() {
-  const [selected, setSelected] = useState(null);
+  // cart = { [productId]: qtyInKg }
+  const [cart, setCart] = useState({});
+  const [checkout, setCheckout] = useState(false);
   const waLink = `https://wa.me/${WHATSAPP_NUMBER}`;
+
+  // Set quantity for a product. 0 (or less) removes it from the cart.
+  const setQty = (id, qty) =>
+    setCart((c) => {
+      const next = { ...c };
+      const q = Math.min(50, +qty.toFixed(1));
+      if (q <= 0) delete next[id];
+      else next[id] = q;
+      return next;
+    });
+
+  const items = PRODUCTS.filter((p) => cart[p.id]).map((p) => ({ ...p, qty: cart[p.id] }));
+  const totalKg = items.reduce((s, i) => s + i.qty, 0);
+  const total = items.reduce((s, i) => s + i.qty * i.price, 0);
 
   return (
     <>
@@ -59,24 +79,59 @@ export default function Store() {
 
       <main>
         <section className="hero">
-          <div className="hero-copy">
-            <h1>आमचा दिवाळी फराळ</h1>
-            <p className="tagline">Athavan Aai chya chavichi…</p>
-            <p className="lead">
-              Homemade chivda, chakali, ladu, shev and shankarpale, made fresh the traditional
-              way and delivered to your home this Diwali.
-            </p>
-            <div className="hero-actions">
-              <a href="#menu" className="btn btn-green">Order your faral</a>
-              <a href={waLink} target="_blank" rel="noreferrer" className="btn btn-line">Ask us on WhatsApp</a>
-            </div>
-          </div>
           <div className="hero-art">
             <img src="/banner.jpeg" alt="AAi Foods – homemade chivda, chakali, ladu, shev and more" />
           </div>
         </section>
 
-        <section className="promises" aria-label="Our promise">
+       
+
+        <section id="menu" className="menu">
+          <div className="section-head">
+            <h2>दिवाळी फराळ मेनू</h2>
+            <p>Diwali faral menu. All prices are per kg. Add as many items as you like.</p>
+          </div>
+
+          <div className="menu-cols">
+            {GROUPS.map((g) => (
+              <div key={g.key} className="menu-group">
+                <h3>
+                  {g.mr} <small>{g.en}</small>
+                </h3>
+                <ul>
+                  {PRODUCTS.filter((p) => p.type === g.key).map((p) => {
+                    const q = cart[p.id] || 0;
+                    return (
+                      <li key={p.id} className="menu-row">
+                        <div className="nm">
+                          <b>{p.mr}</b>
+                          <span>{p.en}</span>
+                        </div>
+                        <span className="dots" aria-hidden="true" />
+                        <div className="pr">
+                          ₹{p.price}<small>/kg</small>
+                        </div>
+                        {q === 0 ? (
+                          <button className="btn btn-green small" onClick={() => setQty(p.id, 1)}
+                                  aria-label={`Add ${p.en}`}>
+                            Add
+                          </button>
+                        ) : (
+                          <div className="qty-ctl" role="group" aria-label={`${p.en} quantity`}>
+                            <button type="button" onClick={() => setQty(p.id, q - 0.5)} aria-label="Less">−</button>
+                            <span>{q} kg</span>
+                            <button type="button" onClick={() => setQty(p.id, q + 0.5)} aria-label="More">+</button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+ <section className="promises" aria-label="Our promise">
           <ul>
             {PROMISES.map((p) => (
               <li key={p.title}>
@@ -89,42 +144,6 @@ export default function Store() {
             ))}
           </ul>
         </section>
-
-        <section id="menu" className="menu">
-          <div className="section-head">
-            <h2>दिवाळी फराळ मेनू</h2>
-            <p>Diwali faral menu. All prices are per kg.</p>
-          </div>
-
-          <div className="menu-cols">
-            {GROUPS.map((g) => (
-              <div key={g.key} className="menu-group">
-                <h3>
-                  {g.mr} <small>{g.en}</small>
-                </h3>
-                <ul>
-                  {PRODUCTS.filter((p) => p.type === g.key).map((p) => (
-                    <li key={p.id} className="menu-row">
-                      <div className="nm">
-                        <b>{p.mr}</b>
-                        <span>{p.en}</span>
-                      </div>
-                      <span className="dots" aria-hidden="true" />
-                      <div className="pr">
-                        ₹{p.price}<small>/kg</small>
-                      </div>
-                      <button className="btn btn-green small" onClick={() => setSelected(p)}
-                              aria-label={`Order ${p.en}`}>
-                        Order Now
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section id="how" className="how">
           <h2>Ordering is simple</h2>
           <ol>
@@ -149,21 +168,63 @@ export default function Store() {
             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
             </svg>
-            +91 80558 08899
+            <span className="phone">{PHONE_DISPLAY}</span>
           </a>
         </section>
       </main>
 
       <footer className="foot">
-        <img src="/logo.jpeg" alt="" />
-        <p>
-          <b>AAi Foods</b><br />
-          Homemade food products. Traditional taste, always.
-        </p>
-        <small>© 2026 AAi Foods. All rights reserved.</small>
+        <div className="foot-inner">
+          <div className="foot-brand">
+            <img src="/logo.jpeg" alt="" />
+            <div>
+              <b>AAi Foods</b>
+              <p>Homemade food products. Traditional taste, always.</p>
+            </div>
+          </div>
+
+          <div className="foot-col">
+            <h4>Quick links</h4>
+            <a href="#menu">Menu</a>
+            <a href="#how">How to order</a>
+            <a href={waLink} target="_blank" rel="noreferrer">WhatsApp</a>
+          </div>
+
+          <div className="foot-col">
+            <h4>Contact</h4>
+            <a href={`tel:${PHONE_TEL}`} className="phone">{PHONE_DISPLAY}</a>
+            <span>Home delivery available</span>
+          </div>
+
+          <div className="foot-col">
+            <h4>Licence</h4>
+            <span className="foot-fssai">FSSAI Lic. No.: <b>{FSSAI_NO}</b></span>
+          </div>
+        </div>
+        <div className="foot-bottom">© 2026 AAi Foods. All rights reserved.</div>
       </footer>
 
-      {selected && <OrderModal product={selected} onClose={() => setSelected(null)} />}
+      {/* Sticky cart bar: appears once at least one item is added */}
+      {items.length > 0 && !checkout && (
+        <div className="cart-bar" role="region" aria-label="Your cart">
+          <div className="cart-sum">
+            <b>{items.length} {items.length === 1 ? "item" : "items"} · {totalKg} kg</b>
+            <span>Total ₹{total}</span>
+          </div>
+          <button className="btn btn-green" onClick={() => setCheckout(true)}>
+            View cart &amp; order
+          </button>
+        </div>
+      )}
+
+      {checkout && (
+        <OrderModal
+          items={items}
+          onQtyChange={setQty}
+          onClose={() => setCheckout(false)}
+          onPlaced={() => setCart({})}
+        />
+      )}
     </>
   );
 }
