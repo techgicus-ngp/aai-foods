@@ -2,8 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { auth, db } from "./firebase.js";
-import { toEmail } from "./adminConfig.js";
 import { PRODUCTS } from "./products.js";
+
+
+// Admin can sign in with a full email (admin@gmail.com) or a simple username.
+// A username without "@" becomes  <username>@aaifoods.app
+const toEmail = (value) => {
+  const v = value.trim().toLowerCase();
+  return v.includes("@") ? v : `${v}@aaifoods.app`;
+};
 
 const STATUSES = ["New", "Confirmed", "Delivered", "Cancelled"];
 const RANGES = [
