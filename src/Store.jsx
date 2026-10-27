@@ -2,9 +2,13 @@ import { useState } from "react";
 import { PRODUCTS, WHATSAPP_NUMBER } from "./products.js";
 import OrderModal from "./OrderModal.jsx";
 
-const FSSAI_NO = "21526077002920";
-const PHONE_DISPLAY = "+91 80558 08899";
-const PHONE_TEL = "+918055808899";
+const FSSAI_NOS = ["21526077002920", "11525056000056"];
+
+const PHONES = [
+  // { display: "+91 80558 08899", tel: "+918055808899" },
+  { display: "+91 70666 88288", tel: "+917066688288" },
+  { display: "+91 70666 99299", tel: "+917066699299" },
+];
 
 const GROUPS = [
   { key: "sweet", mr: "गोड फराळ", en: "Sweets" },
@@ -84,8 +88,6 @@ export default function Store() {
           </div>
         </section>
 
-       
-
         <section id="menu" className="menu">
           <div className="section-head">
             <h2>दिवाळी फराळ मेनू</h2>
@@ -131,7 +133,8 @@ export default function Store() {
             ))}
           </div>
         </section>
- <section className="promises" aria-label="Our promise">
+
+        <section className="promises" aria-label="Our promise">
           <ul>
             {PROMISES.map((p) => (
               <li key={p.title}>
@@ -144,6 +147,7 @@ export default function Store() {
             ))}
           </ul>
         </section>
+
         <section id="how" className="how">
           <h2>Ordering is simple</h2>
           <ol>
@@ -164,12 +168,7 @@ export default function Store() {
             <h2>आजच ऑर्डर करा!</h2>
             <p>Home delivery available. Call or message us to place a bulk or festival order.</p>
           </div>
-          <a href={waLink} target="_blank" rel="noreferrer" className="contact-num">
-            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
-            </svg>
-            <span className="phone">{PHONE_DISPLAY}</span>
-          </a>
+          
         </section>
       </main>
 
@@ -192,13 +191,17 @@ export default function Store() {
 
           <div className="foot-col">
             <h4>Contact</h4>
-            <a href={`tel:${PHONE_TEL}`} className="phone">{PHONE_DISPLAY}</a>
+            {PHONES.map((ph) => (
+              <a key={ph.tel} href={`tel:${ph.tel}`} className="phone">{ph.display}</a>
+            ))}
             <span>Home delivery available</span>
           </div>
 
           <div className="foot-col">
             <h4>Licence</h4>
-            <span className="foot-fssai">FSSAI Lic. No.: <b>{FSSAI_NO}</b></span>
+            {FSSAI_NOS.map((n) => (
+              <span key={n} className="foot-fssai">FSSAI Lic. No.: <b>{n}</b></span>
+            ))}
           </div>
         </div>
         <div className="foot-bottom">© 2026 AAi Foods. All rights reserved.</div>

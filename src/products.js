@@ -1,5 +1,5 @@
 // Edit names / prices here. Price is per kg (₹).
-export const WHATSAPP_NUMBER = "918055808899"; // country code + number, no "+"
+export const WHATSAPP_NUMBER = "917066688288"; // country code + number, no "+"
 
 export const PRODUCTS = [
   { id: 1, type: "savoury",  mr: "चिवडा",          en: "Chivda",              price: 450 },
