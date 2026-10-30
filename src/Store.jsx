@@ -25,7 +25,7 @@ const SECTIONS = [
 
 const GROUPS = [
   { key: "sweet", mr: "गोड", en: "Sweets" },
-  { key: "savoury", mr: "तिखट / खारी", en: "Savouries" },
+  { key: "Namkeen", mr: "नमकीन", en: "Savouries" },
 ];
 
 const PROMISES = [
