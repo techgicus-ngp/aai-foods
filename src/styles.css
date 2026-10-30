@@ -348,3 +348,16 @@ input, textarea, select { width: 100%; font: inherit; padding: .6rem .7rem; bord
 }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+
+/* Proper font for all prices (the ₹ sign renders cleanly) */
+.pr, .pr small, .ci-sub, .total b, .cart-sum span, .price-font {
+  font-family: "Poppins", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 600;
+}
+.pr small { font-weight: 500; font-size: .75em; opacity: .75; }
+.pr { white-space: nowrap; }
+
+/* section titles with the English subtitle */
+.section-head h2 small { font-size: .55em; font-weight: 500; opacity: .7; margin-left: .4em; }

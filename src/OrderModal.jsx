@@ -11,8 +11,7 @@ export default function OrderModal({ items = [], onQtyChange, onClose, onPlaced 
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(null); // { waUrl, saved }
 
-  const total = items.reduce((s, i) => s + i.qty * i.price, 0);
-  const totalKg = items.reduce((s, i) => s + i.qty, 0);
+  const total = Math.round(items.reduce((s, i) => s + i.qty * i.price, 0));
 
   async function submit(e) {
     e.preventDefault();
@@ -26,16 +25,17 @@ export default function OrderModal({ items = [], onQtyChange, onClose, onPlaced 
 
     const lines = items.map((i) => ({
       product: `${i.mr} (${i.en})`,
-      pricePerKg: i.price,
+      priceLabel: i.priceLabel,            // "₹450/kg" or "₹185/250 g"
+      qtyText: i.orderLabel,               // "1.5 kg" or "2 × 250 g"
       qty: i.qty,
-      subtotal: i.qty * i.price,
+      subtotal: Math.round(i.qty * i.price),
     }));
 
     const order = {
       items: lines,
       // Summary fields kept so an existing admin panel still shows something readable
-      product: lines.map((l) => `${l.product} × ${l.qty} kg`).join(", "),
-      qty: totalKg,
+      product: lines.map((l) => `${l.product} – ${l.qtyText}`).join(", "),
+      qty: items.length, // number of different items (kg and packs can't be added together)
       total,
       name: name.trim(),
       phone: phone.trim(),
@@ -54,12 +54,12 @@ export default function OrderModal({ items = [], onQtyChange, onClose, onPlaced 
 
     // 2) Send to WhatsApp
     const itemText = lines
-      .map((l, n) => `${n + 1}. ${l.product}\n   ${l.qty} kg × ₹${l.pricePerKg} = ₹${l.subtotal}`)
+      .map((l, n) => `${n + 1}. ${l.product}\n   ${l.qtyText} @ ${l.priceLabel} = ₹${l.subtotal}`)
       .join("\n");
     const msg =
       `*New Order – AAi Foods*\n\n` +
       `${itemText}\n\n` +
-      `Total quantity: ${totalKg} kg\n` +
+      `Items: ${items.length}\n` +
       `*Total: ₹${total}*\n\n` +
       `Name: ${order.name}\n` +
       `Mobile: ${order.phone}\n` +
@@ -103,14 +103,14 @@ export default function OrderModal({ items = [], onQtyChange, onClose, onPlaced 
                   <li key={i.id} className="cart-item">
                     <div className="ci-name">
                       <b>{i.mr}</b>
-                      <span>{i.en} · ₹{i.price}/kg</span>
+                      <span>{i.en} · <span className="price-font">{i.priceLabel}</span></span>
                     </div>
                     <div className="qty-ctl" role="group" aria-label={`${i.en} quantity`}>
-                      <button type="button" onClick={() => onQtyChange(i.id, i.qty - 0.5)} aria-label="Less">−</button>
-                      <span>{i.qty} kg</span>
-                      <button type="button" onClick={() => onQtyChange(i.id, i.qty + 0.5)} aria-label="More">+</button>
+                      <button type="button" onClick={() => onQtyChange(i.id, i.qty - i.step)} aria-label="Less">−</button>
+                      <span>{i.qtyLabel}</span>
+                      <button type="button" onClick={() => onQtyChange(i.id, i.qty + i.step)} aria-label="More">+</button>
                     </div>
-                    <div className="ci-sub">₹{i.qty * i.price}</div>
+                    <div className="ci-sub price-font">₹{Math.round(i.qty * i.price)}</div>
                     <button type="button" className="ci-remove" onClick={() => onQtyChange(i.id, 0)}
                             aria-label={`Remove ${i.en}`}>×</button>
                   </li>
@@ -118,7 +118,10 @@ export default function OrderModal({ items = [], onQtyChange, onClose, onPlaced 
               </ul>
             )}
 
-            <div className="total">Total ({totalKg} kg) <b>₹{total}</b></div>
+            <div className="total">
+              Total ({items.length} {items.length === 1 ? "item" : "items"}){" "}
+              <b className="price-font">₹{total}</b>
+            </div>
 
             <label htmlFor="n">Your name</label>
             <input id="n" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
