@@ -12,7 +12,7 @@ const RAW_PRODUCTS = [
   { id: 7,  type: "Namkeen", mr: "साधी शेव",       en: "Plain Shev",        price: 400, unit: "1 kg" },
   { id: 8,  type: "sweet",   mr: "गोड शंकरपाळे",    en: "Sweet Shankarpale", price: 450, unit: "1 kg" },
   { id: 9,  type: "Namkeen", mr: "खारे शंकरपाळे",   en: "Salty Shankarpale", price: 400, unit: "1 kg" },
-  { id: 10, type: "Namkeen", mr: "भाजणी चकली",     en: "Bhajani Chakli",    price: 500, unit: "1 kg" },
+  { id: 10, type: "Namkeen", mr: "भाजणीची चकली",     en: "Bhajanichi Chakli",    price: 500, unit: "1 kg" },
 
   // ---------- Millet cookies ----------
   { id: 11, type: "sweet",   mr: "ज्वारी कुकीज",    en: "Jowar Cookies",     price: 185, unit: "250 g" },
